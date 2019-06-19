@@ -1,10 +1,22 @@
+const fs = require('fs');
 const { exec } = require('child_process');
+const { processGitHubData } = require('./githubData');
 
-const command = `eleventy --input=./doc --output=_site`;
-console.log(command);
+if (!fs.existsSync('./build')) {
+    fs.mkdirSync('./build');
+}
 
-exec(command, (error, stdout, stderr) => {
-    console.log(`error: ${error}`);
-    console.log(`stdout: ${stdout}`);
-    console.log(`stderr: ${stderr}`);
+fs.readdirSync('./doc').forEach(file => {
+    fs.copyFileSync(`./doc/${file}`, `./build/${file}`);
+});
+
+processGitHubData().then(() => {
+    const command = `eleventy --input=./build --output=_site`;
+    console.log(command);
+    
+    exec(command, (error, stdout, stderr) => {
+        console.log(`error: ${error}`);
+        console.log(`stdout: ${stdout}`);
+        console.log(`stderr: ${stderr}`);
+    });
 });
