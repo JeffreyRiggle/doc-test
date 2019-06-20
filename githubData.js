@@ -1,9 +1,18 @@
 const https = require('https');
+const fs = require('fs');
+let auth = '';
+
+function getHeaders() {
+    return {
+        'User-Agent': 'testdocbuilder',
+        'Authorization': auth
+    };
+}
 
 function getFromServer(url) {
     let data = '';
     return new Promise((resolve, reject) => {
-        https.get(url, { headers: {'User-Agent': 'testdocbuilder'}}, res => {
+        https.get(url, { headers: getHeaders() }, res => {
             res.on('data', d => {
                 data += d;
             });
@@ -20,7 +29,7 @@ function getFromServer(url) {
 function getFromServerRaw(url) {
     let data = '';
     return new Promise((resolve, reject) => {
-        https.get(url, { headers: {'User-Agent': 'testdocbuilder'}}, res => {
+        https.get(url, { headers: getHeaders() }, res => {
             res.on('data', d => {
                 data += d;
             });
@@ -34,15 +43,20 @@ function getFromServerRaw(url) {
     });
 }
 
-async function processGitHubData() {
+async function processGitHubData(username, token) {
+    auth = `Basic ${new Buffer(`${username}:${token}`).toString('base64')}`
     let repos = await getFromServer('https://api.github.com/users/jeffreyriggle/repos');
-    for (const repo in repos) {
+    for (const ind in repos) {
+        const repo = repos[ind];
+        console.log(`Checking contents for repo ${repo.name}`);
         let contents = await getFromServer(`https://api.github.com/repos/JeffreyRiggle/${repo.name}/contents`);
         
-        for (const v in contents) {
+        for (const i in contents) {
+            let v = contents[i];
             if (v.name === 'README.md') {
+                console.log('Found README file copying contents');
                 fs.mkdirSync(`./build/${repo.name}`);
-                let content = getFromServerRaw(v.download_url);
+                let content = await getFromServerRaw(v.download_url);
                 fs.writeFileSync(`./build/${repo.name}/README.md`, content);
             }
         }
